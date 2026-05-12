@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+    </style>
+    <script src="/scripts/boot.js" type="text/javascript"></script>
+</head>
+<body>
+<div class="mini-toolbar" style="border-bottom:0;">
+    <table style="width:100%;">
+        <tr>
+            <td style="width:100%;">
+                <a class="mini-button" onclick="dialogAddPlants()" iconCls="icon-add" plain="true">新增作物</a>
+            </td>
+            <td style="white-space:nowrap;">
+                <label style="font-family:Verdana;">作物类别: </label>
+                <input type="text" id="plantsClass" class="mini-combobox"
+                       style="width:150px;"
+                       textField="plantsClass"
+                       valueField="plantsClass"
+                       url="/plants/class"
+                >
+                <span class="separator"></span>
+                <label style="font-family:Verdana;">作物名称: </label>
+                <input class="mini-textbox" id="plantsName" />
+                <a class="mini-button" iconCls="icon-search" plain="true" onclick="searchPlantsName()">搜索</a>
+            </td>
+        </tr>
+    </table>
+</div>
+<div class="mini-fit">
+    <div id="plants-list" class="mini-datagrid" style="width:100%;height:100%;"
+         url="/plants/list"
+         sizeList="[5,10,20]"
+         pageIndex="1"
+         pageSize="5"
+         idField="plantsId"
+         sortField="plants_id"
+         sortOrder="asc"
+         ajaxOptions="{dataType:'json',method:'get'}">
+        <div property="columns">
+            <div field="plantsId" sortField="plants_id" width="40" headerAlign="center" allowSort="true">作物编号</div>
+
+            <div field="plantsName" width="40" headerAlign="center">作物名称
+            </div>
+            <div field="growthCycle" sortField="growth_cycle" width="120" headerAlign="center" allowSort="true">作物周期
+            </div>
+            <div field="plantsPrice" sortField="price" width="120" headerAlign="center" allowSort="true">
+                作物价格/每斤
+                <input property="editor" class="mini-textbox" style="width:100%;"/>
+            </div>
+            <div field="plantsClass" sortField="class" width="120" headerAlign="center" allowSort="true">作物分类
+            </div>
+            <div name="action" width="200" headerAlign="center" align="center" renderer="onActionRenderer"
+                 cellStyle="padding:0;">操作
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 加载员工信息
+    mini.parse();
+    let grid = mini.get("plants-list");
+    grid.load(); // 发起 ajax 请求
+
+    function searchPlantsName() {
+        let plantsName = mini.get("plantsName").value;
+        grid.load({plantsName: plantsName, action: "searchPlantsName"})
+    }
+
+    // 给下拉选择框添加时间
+    mini.get("plantsClass").on('valuechanged', searchPlantsClass);
+
+    function searchPlantsClass() {
+        let plantsClass = mini.get("plantsClass").value;
+        grid.load({plantsClass: plantsClass, action: "searchPlantsClass"})
+    }
+
+    function onActionRenderer(e) {
+        let grid = e.sender; // 数据表格对象
+        let record = e.record; // 行数据
+        let rowIndex = e.rowIndex; // 行索引
+        let id = record._id; // 内置的 mini ui 给每行数据的一个唯一 id
+        let btns = `
+    <a class="mini-button"  href="javascript:editRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-edit" style=""></span>
+            <span class="mini-button-text">修改</span>
+        </span>
+    </a>
+    `
+        btns += `
+    <a class="mini-button"  href="javascript:deleteRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-remove" style=""></span>
+            <span class="mini-button-text">删除</span>
+        </span>
+    </a>
+    `
+
+        // 如果可以编辑
+        if (grid.isEditingRow(record)) {
+            btns = `
+    <a class="mini-button"  href="javascript:updateRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-save" style=""></span>
+            <span class="mini-button-text">确认</span>
+        </span>
+    </a>
+    `
+            btns += `
+    <a class="mini-button"  href="javascript:cancelRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-cancel" style=""></span>
+            <span class="mini-button-text">取消</span>
+        </span>
+    </a>
+    `
+        }
+        return btns
+    }
+
+    function updateRow(id) {
+        let row = grid.getRowByUID(id);
+        grid.commitEdit();
+        let data = grid.getChanges()[0];
+        if (data === undefined) {
+            mini.alert('数据未改动');
+            return;
+        }
+        grid.loading("保存中，请稍后......");
+        jQuery.ajax({
+            url: "/plants/modify",
+            method: "post",
+            data,
+            dataType: "json",
+            success(data) {
+                if (data.success) {
+                    grid.reload();
+                } else {
+                    alert(data.message);
+                }
+            }
+        })
+    }
+    function cancelRow(id) {
+        grid.reload();
+    }
+    function editRow(id) {
+        let row = grid.getRowByUID(id);
+        if (row) {
+            grid.cancelEdit();
+            grid.beginEditRow(row);
+        }
+    }
+    function deleteRow(id) {
+        let row = grid.getRowByUID(id);
+        let plantsId = row.plantsId;
+        jQuery.ajax({
+            url: "/plants/remove",
+            method: "get",
+            data: {plantsId},
+            dataType: "json",
+            success(data) {
+                if (data.success) {
+                    grid.reload();
+                } else {
+                    mini.alert(data.message);
+                }
+            }
+        })
+    }
+    function afterUpdate() {
+        console.log('afterUpdate')
+    }
+
+    // 新增图书弹出
+    function dialogAddPlants() {
+        mini.open({
+            url: "/view/plants/add_plants",
+            title: "新增作物", width: 600, height: 400,
+            // 弹窗打开的时候
+            onload: function () {
+                console.log('add plants load')
+            },
+            // 弹窗关闭的时候
+            ondestroy: function (action) {
+                grid.reload();
+            }
+        });
+    }
+
+</script>
+
+
+</body>
+</html>

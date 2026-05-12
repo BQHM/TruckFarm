@@ -1,0 +1,58 @@
+﻿[
+  {
+    "id": "xtgl",
+    "iconCls": "fa fa-desktop",
+    "text": "系统管理",
+    "children": [
+      {
+        "id": "nzwgl",
+        "iconCls": "fa fa-leaf",
+        "text": "农作物管理",
+        "url": "/view/plants/index"
+      },
+      {
+        "id": "cggl",
+        "iconCls": "fa fa-line-chart",
+        "text": "采购管理",
+        "url": "/view/procurement/index"
+      }
+    ]
+  },
+  {
+    "id": "dwzz",
+    "iconCls": "fa fa-coffee",
+    "text": "单位组织",
+    "children": [
+      {
+        "id": "gsgl",
+        "iconCls": "fa fa-sitemap",
+        "text": "公司管理",
+        "url": "pages/1.html"
+      },
+      {
+        "id": "bmgl",
+        "iconCls": "fa fa-th-list",
+        "text": "部门管理",
+        "url": "/view/department/index"
+      },
+      {
+        "id": "gwgl",
+        "iconCls": "fa fa-graduation-cap",
+        "text": "岗位管理",
+        "url": "pages/1.html"
+      },
+      {
+        "id": "jsgl",
+        "iconCls": "fa fa-paw",
+        "text": "角色管理",
+        "url": "/view/user/index"
+      },
+      {
+        "id": "yhgl",
+        "iconCls": "fa fa-user",
+        "text": "用户管理",
+        "url": "/view/user/index"
+      }
+    ]
+  }
+]

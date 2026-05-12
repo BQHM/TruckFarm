@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修改密码</title>
+    <script src="/scripts/boot.js" type="text/javascript"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        form {
+            max-width: 400px;
+            margin: 50px auto;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div>
+        <label for="oldPassword">旧密码:</label>
+        <input type="password" id="oldPassword" required>
+        <br>
+
+        <label for="newPassword">新密码:</label>
+        <input type="password" id="newPassword" required>
+        <br>
+
+        <label for="confirmPassword">确认密码:</label>
+        <input type="password" id="confirmPassword" required>
+        <br>
+
+        <button onclick="updatePassword()">更新</button>
+        <button onclick="cancelUpdate()">取消</button>
+    </div>
+</div>
+<script>
+    function updatePassword() {
+        // 获取旧密码和新密码
+        let oldPassword = document.getElementById("oldPassword").value;
+        let newPassword = document.getElementById("newPassword").value;
+        let confirmPassword = document.getElementById("confirmPassword").value;
+
+        // 前端验证，确保密码不为空等
+        if (oldPassword === "" || newPassword === "" || confirmPassword === "") {
+            alert("请填写完整的密码信息");
+            return;
+        }
+
+        // 验证两次输入的新密码是否一致
+        if (newPassword !== confirmPassword) {
+            alert("两次输入的新密码不一致");
+            return;
+        }
+
+        // 发送修改密码的请求
+        jQuery.ajax({
+            url: "/user/modifyPwd",  // 替换成你的Servlet的URL
+            method: "post",
+            data: {
+                oldPassword: oldPassword,
+                newPassword: newPassword
+            },
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                    // 密码修改成功，可以执行一些操作，比如重新加载用户数据
+                    alert("密码修改成功");
+                    window.parent.location = "/";
+                } else {
+                    // 密码修改失败，显示错误信息
+                    alert(data.message);
+                }
+            }
+        });
+    }
+
+    function cancelUpdate() {
+        // 关闭当前窗口
+        if (window.CloseOwnerWindow) return window.CloseOwnerWindow();
+        else window.close();
+    }
+
+</script>
+</body>
+</html>

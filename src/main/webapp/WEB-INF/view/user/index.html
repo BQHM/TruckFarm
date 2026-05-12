@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+    </style>
+    <script src="/scripts/boot.js" type="text/javascript"></script>
+</head>
+<body>
+<div class="mini-toolbar" style="border-bottom:0;">
+    <table style="width:100%;">
+        <tr>
+            <td style="width:100%;">
+                <a class="mini-button" onclick="dialogAddUser()" iconCls="icon-add" plain="true">新增员工</a>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+<div class="mini-fit">
+    <div id="user-list" class="mini-datagrid" style="width:100%;height:100%;"
+         url="/user/list"
+         sizeList="[5,10,20]"
+         pageIndex="1"
+         pageSize="5"
+         idField="account"
+         sortField="account"
+         sortOrder="asc"
+         ajaxOptions="{dataType:'json',method:'get'}">
+        <div property="columns" >
+            <div field="account" sortField="account" width="100" headerAlign="center" allowSort="true">员工账号</div>
+
+            <div field="userName"  width="120" headerAlign="center" allowSort="flase">员工名称</div>
+            <div field="phone"  width="120" headerAlign="center" >
+                联系方式
+                <input property="editor" class="mini-textbox" style="width:100%;"/>
+            </div>
+            <div field="departmentName" sortField="tu.name" width="120" headerAlign="center" allowSort="true">
+                所属部门
+            </div>
+            <div field="dimission" sortField="dimission" width="120" headerAlign="center" allowSort="true">是否在职
+            </div>
+            <div field="roleName" sortField="role_name" width="120" headerAlign="center" allowSort="flase">
+                员工权限
+            </div>
+            <div name="action"  width="200" headerAlign="center" align="center" renderer="onActionRenderer"
+                 cellStyle="padding:0;">操作
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // 加载员工信息
+    mini.parse();
+    let grid = mini.get("user-list");
+    grid.load(); // 发起 ajax 请求
+
+
+
+
+    function searchUserRole() {
+        let userRole = mini.get("roleName").getValue();
+        grid.load({roleName: roleName, action: "searchUserRole"})
+    }
+
+
+    function onActionRenderer(e) {
+        let grid = e.sender; // 数据表格对象
+        let record = e.record; // 行数据
+        let rowIndex = e.rowIndex; // 行索引
+        let id = record._id; // 内置的 mini ui 给每行数据的一个唯一 id
+        let btns = `
+    <a class="mini-button"  href="javascript:editRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-edit" style=""></span>
+            <span class="mini-button-text">修改</span>
+        </span>
+    </a>
+    `
+
+        // 如果可以编辑
+        if (grid.isEditingRow(record)) {
+            btns = `
+    <a class="mini-button"  href="javascript:updateRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-save" style=""></span>
+            <span class="mini-button-text">更新</span>
+        </span>
+    </a>
+    `
+            btns += `
+    <a class="mini-button"  href="javascript:cancelRow(${id})">
+        <span class="mini-button-inner  mini-button-icon-text ">
+            <span class="mini-button-icon mini-icon mini-iconfont icon-cancel" style=""></span>
+            <span class="mini-button-text">取消</span>
+        </span>
+    </a>
+    `
+        }
+        return btns
+    }
+
+    function updateRow(id) {
+        let row = grid.getRowByUID(id);
+        grid.commitEdit();
+        let data = grid.getChanges()[0];
+        if (data === undefined) {
+            mini.alert('数据未改动');
+            return;
+        }
+        grid.loading("保存中，请稍后......");
+        jQuery.ajax({
+            url: "/user/modify",
+            method: "post",
+            data,
+            dataType: "json",
+            success(data) {
+                if (data.success) {
+                    grid.reload();
+                } else {
+                    alert(data.message);
+                }
+            }
+        })
+    }
+
+    function cancelRow(id) {
+        grid.reload();
+    }
+
+    function editRow(id) {
+        let row = grid.getRowByUID(id);
+        if (row) {
+            grid.cancelEdit();
+            grid.beginEditRow(row);
+        }
+    }
+
+    function afterUpdate() {
+        console.log('afterUpdate')
+    }
+
+    function dialogAddUser() {
+        mini.open({
+            url: "/view/user/add_user",
+            title: "新增用户", width: 600, height: 400,
+            // 弹窗打开的时候
+            onload: function () {
+
+            },
+            // 弹窗关闭的时候
+            ondestroy: function (action) {
+                grid.reload();
+            }
+        });
+    }
+
+</script>
+
+
+</body>
+</html>
