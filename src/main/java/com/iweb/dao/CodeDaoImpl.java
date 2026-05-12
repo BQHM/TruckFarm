@@ -5,6 +5,7 @@ import com.iweb.model.Code;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,9 +41,15 @@ public class CodeDaoImpl implements CodeDao {
         Connection conn = dataSource.getConnection();
         try {
 
-            String sql="select * from tb_code";
-            PreparedStatement
-
+            String sql = "select * from tb_code";
+            PreparedStatement pst = conn.prepareStatement(sql);
+            ResultSet rs = pst.executeQuery();
+            while (rs.next()) {
+                Code code = new Code();
+                code.setCode(rs.getString("code"));
+                code.setState(rs.getString("state"));
+                codes.add(code);
+            }
         } finally {
             conn.close();
         }
@@ -50,3 +57,4 @@ public class CodeDaoImpl implements CodeDao {
         return codes;
     }
 }
+

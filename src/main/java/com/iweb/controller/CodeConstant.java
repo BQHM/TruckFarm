@@ -9,7 +9,7 @@ import com.iweb.service.CodeServiceImpl;
 import java.util.*;
 
 public class CodeConstant {
-    private CodeService codeService;
+    private static CodeService codeService;
     private final static Set<String> usedCode = Collections.synchronizedSortedSet(new TreeSet<>());
     private final static Set<String> unUseCode = Collections.synchronizedSortedSet(new TreeSet<>());
 
@@ -61,3 +61,4 @@ public class CodeConstant {
     }
 
 }
+

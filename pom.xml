@@ -58,6 +58,12 @@
             <artifactId>hutool-all</artifactId>
             <version>5.8.16</version>
         </dependency>
+        <!--中文转拼音工具，旧 StrUtl 依赖-->
+        <dependency>
+            <groupId>com.belerweb</groupId>
+            <artifactId>pinyin4j</artifactId>
+            <version>2.5.1</version>
+        </dependency>
 
 
     </dependencies>
@@ -65,3 +71,4 @@
         <finalName>book</finalName>
     </build>
 </project>
+

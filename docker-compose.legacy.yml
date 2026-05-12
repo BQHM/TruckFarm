@@ -1,0 +1,43 @@
+services:
+  legacy-mysql:
+    image: mysql:8.4
+    container_name: truckfarm-legacy-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: truck_farm
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    ports:
+      - "3307:3306"
+    volumes:
+      - truckfarm_legacy_mysql:/var/lib/mysql
+      - ./legacy-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p123456"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  legacy-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.legacy
+    container_name: truckfarm-legacy-web
+    environment:
+      TRUCKFARM_JDBC_URL: jdbc:mysql://legacy-mysql:3306/truck_farm?characterEncoding=utf8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true&useSSL=false
+      TRUCKFARM_JDBC_USER: root
+      TRUCKFARM_JDBC_PASSWORD: 123456
+    depends_on:
+      legacy-mysql:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+
+volumes:
+  truckfarm_legacy_mysql:
+
+
+

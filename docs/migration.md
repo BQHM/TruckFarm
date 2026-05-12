@@ -1,17 +1,17 @@
-# TruckFarm 旧版迁移说明
+# TruckFarm 旧版迭代升级说明
 
 版本：v0.1
 日期：2026-05-12
 状态：迁移草案
 
-## 1. 迁移目标
+## 1. 迭代升级目标
 
-旧版 TruckFarm 是毕业设计时期的传统 Java Web 项目。迁移目标不是小修小补，而是将其作为业务原型，重制为现代化、可维护、可演示的简历项目。
+旧版 TruckFarm 是毕业设计时期的传统 Java Web 项目。本次目标不是小修小补，也不是完全推倒重写，而是在旧项目基础上边重构、边检查旧代码不规范之处、边学习新技术替换旧技术。升级版会把旧项目中有价值的业务模型、字段、SQL、页面流程和菜单设计迁移到现代化、可维护、可演示的简历项目中。
 
-迁移结果：
+迭代升级结果：
 
-- 保留旧项目的农作物、用户、部门等业务概念。
-- 抛弃旧 Servlet + MiniUI 技术架构。
+- 保留并迁移旧项目的农作物、用户、部门、菜单权限等业务概念和可用字段。
+- 重构旧 Servlet + MiniUI 技术实现，将其迁移为 Spring Boot、MyBatis Plus 和 Vue 3 结构。
 - 新增地块、种植计划、采购库存、销售订单和数据看板，形成完整经营闭环。
 - 建立标准的项目文档、代码规范和工程化流程。
 
@@ -51,17 +51,17 @@
 - `CodeConstant` 存在静态方法访问实例字段等设计问题。
 - 缺少统一异常、统一响应、接口文档、测试和工程化部署。
 
-## 3. 迁移策略
+## 3. 迭代迁移策略
 
 ### 3.1 代码策略
 
 | 旧内容 | 处理方式 |
 | --- | --- |
-| `src/main/java` | 作为 legacy 参考，不继续扩展 |
-| `src/main/webapp` | 作为旧 UI 参考，不迁移 MiniUI 代码 |
-| `pom.xml` | 后续新版后端使用 `backend/pom.xml` |
-| `table.sql` | 作为旧数据参考，新版使用 Flyway / Liquibase |
-| `db.properties` | 不迁移，改为 `application.yml` + 环境变量 |
+| `src/main/java` | 按模块迁移业务模型、Controller 流程、Service 规则和 DAO 查询思路 |
+| `src/main/webapp` | 迁移页面信息架构、表格列、搜索条件、按钮操作和静态资源，UI 实现改为 Vue 3 |
+| `pom.xml` | 提取旧依赖信息和 Java 版本记录；新版后端使用 `backend/pom.xml` |
+| `table.sql` | 提取旧菜单、编码和旧表字段线索；新版使用 Flyway / Liquibase 重建脚本 |
+| `db.properties` | 提取数据库连接信息作为本地参考；正式配置改为 `application.yml` + 环境变量 |
 
 ### 3.2 目录策略
 
@@ -80,14 +80,14 @@ TruckFarm/
 
 ```text
 TruckFarm/
-├── legacy/           # 旧版代码整体归档
+├── legacy/           # 旧版代码整体归档，作为迁移源保留
 ├── backend/          # 新版后端
 ├── frontend/         # 新版前端
 ├── docs/
 └── README.md
 ```
 
-迁移旧代码到 `legacy/` 前必须确认路径，避免误删用户代码。
+归档旧代码到 `legacy/` 前必须确认路径，避免误删用户代码。归档后旧代码仍作为学习对照和迁移源保留。
 
 ## 4. 业务映射
 
@@ -98,10 +98,10 @@ TruckFarm/
 | 静态菜单 JSON | `sys_menu` + `sys_role_menu` | 支持动态菜单和按钮权限 |
 | `tb_department` 部门 | `tf_department` | 保留部门概念，补充树形结构和状态 |
 | `tb_plants` 农作物 | `tf_crop` + `tf_crop_category` | 作物分类规范化 |
-| `tb_scheduled` 排班/关联 | `tf_employee`、`tf_planting_plan` | 不直接迁移，按业务重建 |
+| `tb_scheduled` 排班/关联 | `tf_employee`、`tf_planting_plan` | 先确认旧字段含义，再迁移可用关联关系 |
 | `tb_code` 编码池 | 统一编号生成器 | 改为雪花 ID + 业务单号生成规则 |
 
-## 5. 数据迁移方案
+## 5. 数据迭代迁移方案
 
 如果需要迁移旧数据，建议按以下步骤：
 
@@ -118,13 +118,13 @@ TruckFarm/
 
 ## 6. 新版替代设计
 
-| 旧版 | 新版 |
-| --- | --- |
-| `/login -> Session -> SessionFilter` | `/api/auth/login -> JWT -> Spring Security Filter -> Redis blacklist` |
-| `/data/menu.json` 静态菜单 | `sys_menu + sys_role_menu -> /api/auth/menus -> Vue Router 动态路由` |
-| JDBC PreparedStatement + ResultSet | MyBatis Plus BaseMapper + XML 复杂查询 + MapStruct |
-| MiniUI datagrid + jQuery ajax | Vue 3 + Element Plus Table/Form + Axios API 模块 |
-| `db.properties` | `application.yml` + `.env` + 环境变量 |
+| 旧版 | 新版 | 复用方式 |
+| --- | --- | --- |
+| `/login -> Session -> SessionFilter` | `/api/auth/login -> JWT -> Spring Security Filter -> Redis blacklist` | 复用登录流程概念和账号字段，不复用明文密码和 Session 鉴权 |
+| `/data/menu.json` 静态菜单 | `sys_menu + sys_role_menu -> /api/auth/menus -> Vue Router 动态路由` | 复用菜单层级、标题、图标和 URL 作为初始化种子 |
+| JDBC PreparedStatement + ResultSet | MyBatis Plus BaseMapper + XML 复杂查询 + MapStruct | 复用查询需求和字段映射，重写 SQL 安全和分页实现 |
+| MiniUI datagrid + jQuery ajax | Vue 3 + Element Plus Table/Form + Axios API 模块 | 复用表格列、筛选条件、弹窗流程和操作按钮 |
+| `db.properties` | `application.yml` + `.env` + 环境变量 | 仅作为本地开发连接参考，不提交真实敏感配置 |
 
 ## 7. 迁移阶段计划
 
@@ -169,24 +169,29 @@ TruckFarm/
 
 | 风险 | 处理方式 |
 | --- | --- |
-| 旧代码和新代码混杂 | 新代码必须放 `backend/` 和 `frontend/` |
+| 旧代码和新代码混杂 | 新代码必须放 `backend/` 和 `frontend/`，旧代码归档到 `legacy/` 后只作为迁移源 |
 | 数据库字段含义不清 | 不强行迁移旧数据，优先使用新版演示数据 |
 | 功能范围膨胀 | 严格按 MVP 闭环推进 |
-| 重构变成翻译旧代码 | 只迁移业务概念，不迁移旧实现 |
+| 重构变成机械翻译旧代码 | 迁移业务价值和可用逻辑，同时修复旧架构、安全和工程化问题 |
 | 删除旧文件造成不可恢复 | 移动或删除旧代码前必须确认并保留备份 |
 
-## 9. 暂不迁移内容
+## 9. 不原样迁移内容
 
-- MiniUI 组件和样式。
-- 旧版手写 DispatcherServlet。
-- 旧版 JDBC DAO 实现。
-- 旧版 `tb_code` 编码池实现。
-- 不完整或无法确认含义的旧 SQL。
+以下内容不作为最终实现原样迁移，但可提取其中的业务意图：
 
-## 10. 迁移完成判定
+- MiniUI 组件实现本身；表格列、表单字段和操作流程需要迁移到 Vue 页面。
+- 旧版手写 DispatcherServlet；请求分发关系需要迁移为 Spring MVC Controller。
+- 旧版 JDBC 连接管理和 DAO 实现；查询语义需要迁移为 MyBatis Plus / XML。
+- 旧版 `tb_code` 静态编码池实现；编号需求可迁移为新版业务单号生成器。
+- 不完整或无法确认含义的旧 SQL；确认字段含义后再迁移为新版脚本。
 
-- 新版系统可以独立启动，不依赖旧 Servlet 项目。
+## 10. 迭代升级完成判定
+
+- 升级版系统可以独立启动，不依赖旧 Servlet 运行架构。
 - MVP 业务闭环可完整演示。
-- 旧项目核心概念已在新版中有合理映射。
-- README 明确说明项目重制背景和技术亮点。
+- 旧项目核心概念已在升级版中有合理映射。
+- README 明确说明项目迭代升级背景、学习过程和技术亮点。
 - 旧代码已归档到 `legacy/` 或明确标注为历史代码。
+
+
+

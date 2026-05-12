@@ -1,4 +1,4 @@
-﻿[
+[
   {
     "id": "xtgl",
     "iconCls": "fa fa-desktop",
@@ -27,7 +27,7 @@
         "id": "gsgl",
         "iconCls": "fa fa-sitemap",
         "text": "公司管理",
-        "url": "pages/1.html"
+        "url": "/pages/1.html"
       },
       {
         "id": "bmgl",
@@ -39,7 +39,7 @@
         "id": "gwgl",
         "iconCls": "fa fa-graduation-cap",
         "text": "岗位管理",
-        "url": "pages/1.html"
+        "url": "/pages/1.html"
       },
       {
         "id": "jsgl",
