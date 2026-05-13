@@ -17,7 +17,7 @@
 - MiniUI 后台页面开发
 - WAR 包部署到 Tomcat
 
-这个版本不是最终要继续扩展的架构，而是后续升级到 Spring Boot 3 + Vue 3 的基础版本。
+这个版本不是最终要继续扩展的架构，而是后续升级到 Java 25 + Spring Boot 4 + PostgreSQL + Vue 3 的基础版本。
 
 ---
 
@@ -211,12 +211,12 @@ GET  /user/list    -> 返回 admin 用户数据
 
 | 旧实现 | 升级方向 |
 | --- | --- |
-| Servlet / Filter | Spring Boot 3 / Spring MVC / Spring Security |
+| Servlet / Filter | Java 25 + Spring Boot 4 / Spring MVC / Spring Security |
 | Session | JWT + Redis Token 管理 |
-| JDBC DAO | MyBatis Plus + XML |
+| JDBC DAO | MyBatis / MyBatis Plus（兼容验证后）+ XML |
 | 手写 JSON 输出 | Spring MVC 自动序列化 + 统一响应 |
 | MiniUI / jQuery | Vue 3 + TypeScript + Element Plus |
-| `table.sql` 手工脚本 | Flyway / Liquibase 数据库版本管理 |
+| `table.sql` 手工脚本 | PostgreSQL + Flyway 数据库版本管理 |
 | WAR + 外置 Tomcat | Spring Boot 可执行 Jar / Docker 部署 |
 | 静态菜单 JSON | 数据库动态菜单 + 前端动态路由 |
 

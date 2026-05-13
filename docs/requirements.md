@@ -6,7 +6,7 @@
 
 ## 1. 项目背景
 
-TruckFarm 原始版本是基于 Servlet、MiniUI 和 MySQL 的毕业设计项目，功能集中在登录、用户、部门、农作物管理等基础后台能力。本次不是纯粹新开发，而是在旧项目基础上进行迭代升级：边检查旧代码不规范之处，边学习 Spring Boot、MyBatis Plus、Spring Security、Vue 3 等新技术，边将旧功能重构为现代前后端分离架构，并补足完整业务闭环和工程化能力。
+TruckFarm 原始版本是基于 Servlet、MiniUI 和 MySQL 的毕业设计项目，功能集中在登录、用户、部门、农作物管理等基础后台能力。本次不是纯粹新开发，而是在旧项目基础上进行迭代升级：边检查旧代码不规范之处，边学习 Java 25、Spring Boot 4、PostgreSQL、Flyway、Spring Security、Vue 3 等新技术，边将旧功能重构为现代前后端分离架构，并补足完整业务闭环和工程化能力。MyBatis / MyBatis Plus、OpenAPI 等生态依赖需要在 P1 阶段先做 Spring Boot 4 兼容性验证。
 
 ## 2. 产品定位
 
@@ -114,7 +114,8 @@ MVP 模块：
 | 安全 | JWT 鉴权、密码加密、权限校验、敏感日志脱敏 |
 | 性能 | 常规列表小于 500ms，首页看板小于 1s |
 | 可维护性 | 前后端分离、模块化、统一异常、统一响应 |
-| 可部署性 | Docker Compose 一键启动 MySQL、Redis、后端、前端 |
+| 技术验证 | P1 先验证 Java 25 + Spring Boot 4 + PostgreSQL + Flyway + Redis + MyBatis / MyBatis Plus + OpenAPI 兼容性 |
+| 可部署性 | Docker Compose 一键启动 PostgreSQL、Redis、后端、前端 |
 | 可测试性 | 核心 Service 有单元测试，关键接口有集成测试 |
 | 可展示性 | README 有截图、演示账号、启动步骤和项目亮点 |
 

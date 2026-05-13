@@ -11,7 +11,7 @@
 迭代升级结果：
 
 - 保留并迁移旧项目的农作物、用户、部门、菜单权限等业务概念和可用字段。
-- 重构旧 Servlet + MiniUI 技术实现，将其迁移为 Spring Boot、MyBatis Plus 和 Vue 3 结构。
+- 重构旧 Servlet + MiniUI 技术实现，将其迁移为 Java 25 + Spring Boot 4、MyBatis / MyBatis Plus（兼容验证后）、PostgreSQL + Flyway 和 Vue 3 结构。
 - 新增地块、种植计划、采购库存、销售订单和数据看板，形成完整经营闭环。
 - 建立标准的项目文档、代码规范和工程化流程。
 
@@ -60,7 +60,7 @@
 | `src/main/java` | 按模块迁移业务模型、Controller 流程、Service 规则和 DAO 查询思路 |
 | `src/main/webapp` | 迁移页面信息架构、表格列、搜索条件、按钮操作和静态资源，UI 实现改为 Vue 3 |
 | `pom.xml` | 提取旧依赖信息和 Java 版本记录；新版后端使用 `backend/pom.xml` |
-| `table.sql` | 提取旧菜单、编码和旧表字段线索；新版使用 Flyway / Liquibase 重建脚本 |
+| `table.sql` | 提取旧菜单、编码和旧表字段线索；新版使用 PostgreSQL + Flyway 重建脚本 |
 | `db.properties` | 提取数据库连接信息作为本地参考；正式配置改为 `application.yml` + 环境变量 |
 
 ### 3.2 目录策略
@@ -107,8 +107,8 @@ TruckFarm/
 
 1. 备份旧库 `truck_farm`。
 2. 补全旧表结构说明，确认字段含义。
-3. 创建新版数据库和 Flyway 初始化脚本。
-4. 编写一次性迁移 SQL 或 Java migration 工具。
+3. 创建新版 PostgreSQL 数据库和 Flyway 初始化脚本。
+4. 编写 MySQL -> PostgreSQL 的一次性迁移 SQL 或 Java migration 工具。
 5. 迁移顺序：部门 -> 用户/员工 -> 角色 -> 菜单 -> 作物分类 -> 作物。
 6. 迁移后进行数据校验。
 
@@ -122,9 +122,9 @@ TruckFarm/
 | --- | --- | --- |
 | `/login -> Session -> SessionFilter` | `/api/auth/login -> JWT -> Spring Security Filter -> Redis blacklist` | 复用登录流程概念和账号字段，不复用明文密码和 Session 鉴权 |
 | `/data/menu.json` 静态菜单 | `sys_menu + sys_role_menu -> /api/auth/menus -> Vue Router 动态路由` | 复用菜单层级、标题、图标和 URL 作为初始化种子 |
-| JDBC PreparedStatement + ResultSet | MyBatis Plus BaseMapper + XML 复杂查询 + MapStruct | 复用查询需求和字段映射，重写 SQL 安全和分页实现 |
+| JDBC PreparedStatement + ResultSet | MyBatis Mapper + XML 复杂查询 + MapStruct；MyBatis Plus 兼容验证后用于基础 CRUD | 复用查询需求和字段映射，重写 SQL 安全和分页实现 |
 | MiniUI datagrid + jQuery ajax | Vue 3 + Element Plus Table/Form + Axios API 模块 | 复用表格列、筛选条件、弹窗流程和操作按钮 |
-| `db.properties` | `application.yml` + `.env` + 环境变量 | 仅作为本地开发连接参考，不提交真实敏感配置 |
+| `db.properties` | `application.yml` + `.env` + 环境变量 + PostgreSQL 配置 | 仅作为本地开发连接参考，不提交真实敏感配置 |
 
 ## 7. 迁移阶段计划
 
@@ -136,7 +136,8 @@ TruckFarm/
 
 ### 阶段 2：新版脚手架
 
-- 创建 `backend/` Spring Boot 项目。
+- 验证 Java 25 + Spring Boot 4 + PostgreSQL + Flyway + MyBatis / MyBatis Plus 兼容性。
+- 创建 `backend/` Spring Boot 4 项目。
 - 创建 `frontend/` Vue 3 项目。
 - 添加 Docker Compose。
 - 添加 README 和环境变量示例。
@@ -181,7 +182,7 @@ TruckFarm/
 
 - MiniUI 组件实现本身；表格列、表单字段和操作流程需要迁移到 Vue 页面。
 - 旧版手写 DispatcherServlet；请求分发关系需要迁移为 Spring MVC Controller。
-- 旧版 JDBC 连接管理和 DAO 实现；查询语义需要迁移为 MyBatis Plus / XML。
+- 旧版 JDBC 连接管理和 DAO 实现；查询语义需要迁移为 MyBatis Mapper / XML，MyBatis Plus 只在兼容验证通过后用于基础 CRUD。
 - 旧版 `tb_code` 静态编码池实现；编号需求可迁移为新版业务单号生成器。
 - 不完整或无法确认含义的旧 SQL；确认字段含义后再迁移为新版脚本。
 

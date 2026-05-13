@@ -38,17 +38,26 @@
 
 目标：搭建前后端分离项目骨架和本地运行环境。
 
-### 3.1 后端脚手架
+### 3.1 技术栈兼容性验证
+
+- [ ] 验证本机 JDK 25、Maven Toolchain 和 Spring Boot 4 最小应用。
+- [ ] 验证 PostgreSQL JDBC Driver、连接池和 Docker Compose 服务。
+- [ ] 验证 Flyway PostgreSQL migration 可以初始化和重复执行。
+- [ ] 验证 MyBatis 3；MyBatis Plus 通过 Spring Boot 4 兼容验证后再引入。
+- [ ] 验证 Redis Starter、Spring Security、JWT 和 OpenAPI 相关依赖。
+- [ ] 将验证结论记录到任务文档或新增 `docs/tech-validation.md`。
+
+### 3.2 后端脚手架
 
 - [ ] 创建 `backend/` Maven 项目。
-- [ ] 配置 JDK 21 和 Spring Boot 3。
-- [ ] 添加依赖：Web、Validation、Security、MyBatis Plus、MySQL、Redis、Lombok、MapStruct、OpenAPI、Flyway。
+- [ ] 配置 JDK 25 和 Spring Boot 4。
+- [ ] 添加依赖：Web、Validation、Security、PostgreSQL Driver、Redis、Lombok、MapStruct、Flyway、MyBatis 3；MyBatis Plus 和 OpenAPI 依赖待兼容验证后引入。
 - [ ] 创建包结构 `com.truckfarm`。
 - [ ] 创建 `TruckFarmApplication`。
 - [ ] 添加 `application.yml`、`application-dev.yml`、`application-test.yml`。
 - [ ] 配置统一时区和 JSON 序列化。
 
-### 3.2 前端脚手架
+### 3.3 前端脚手架
 
 - [ ] 创建 `frontend/` Vue 3 + TypeScript + Vite 项目。
 - [ ] 安装 Element Plus、Pinia、Vue Router、Axios、ECharts。
@@ -56,15 +65,15 @@
 - [ ] 创建基础目录：`api/`、`views/`、`layouts/`、`stores/`、`types/`、`utils/`。
 - [ ] 创建基础布局和路由。
 
-### 3.3 环境编排
+### 3.4 环境编排
 
 - [ ] 创建 `docker-compose.yml`。
-- [ ] 添加 MySQL 8 服务。
+- [ ] 添加 PostgreSQL 服务。
 - [ ] 添加 Redis 7 服务。
 - [ ] 添加 `.env.example`。
 - [ ] 编写本地启动说明。
 
-验收标准：后端可以启动并访问健康检查接口；前端可以启动并显示基础页面；MySQL 和 Redis 可以通过 Docker Compose 启动。
+验收标准：后端可以启动并访问健康检查接口；前端可以启动并显示基础页面；PostgreSQL 和 Redis 可以通过 Docker Compose 启动。
 
 ## 4. P2 基础能力
 
@@ -273,7 +282,8 @@
 
 1. 盘点旧代码并创建 `docs/legacy-inventory.md`。
 2. 确认是否将旧版代码移动到 `legacy/`。
-3. 创建 `backend/` Spring Boot 3 脚手架。
-4. 创建 `frontend/` Vue 3 脚手架。
-5. 编写 Docker Compose 和 `.env.example`。
+3. 完成 Java 25 + Spring Boot 4 + PostgreSQL + Flyway 技术栈兼容性验证。
+4. 创建 `backend/` Spring Boot 4 脚手架。
+5. 创建 `frontend/` Vue 3 脚手架。
+6. 编写 Docker Compose 和 `.env.example`。
 
