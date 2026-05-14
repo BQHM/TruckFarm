@@ -1,7 +1,7 @@
 # TruckFarm 数据库设计
 
-版本：v0.1
-日期：2026-05-12
+版本：v0.2
+日期：2026-05-13
 状态：数据库草案
 
 ## 1. 设计原则
@@ -21,7 +21,7 @@
 
 - Flyway 脚本放在 `backend/src/main/resources/db/migration/`。
 - 版本命名使用 `V{版本号}__{说明}.sql`，例如 `V1__init_system_tables.sql`。
-- 初始化顺序建议：系统权限表 -> 组织人员表 -> 作物地块表 -> 种植表 -> 采购库存销售表 -> 演示数据。
+- 初始化顺序建议：系统权限表 -> 组织人员表 -> 作物地块表 -> 种植表 -> 采购库存销售表 -> 模拟表 -> 资金表 -> 演示数据。
 - 已合并执行过的 migration 禁止直接修改；需要调整时新增下一个版本脚本。
 - PostgreSQL 语法以 Flyway 脚本为准，旧版 `table.sql` 只作为字段和菜单参考。
 
@@ -35,6 +35,7 @@ erDiagram
   sys_menu ||--o{ sys_role_menu : belongs
   tf_department ||--o{ tf_employee : owns
   tf_crop_category ||--o{ tf_crop : contains
+  tf_crop ||--o{ tf_crop_growth_rule : has
   tf_field ||--o{ tf_planting_plan : used_by
   tf_crop ||--o{ tf_planting_plan : planted
   tf_planting_plan ||--o{ tf_harvest_record : produces
@@ -44,6 +45,13 @@ erDiagram
   tf_sales_order ||--o{ tf_sales_order_item : contains
   tf_crop ||--o{ tf_inventory_stock : stocks
   tf_inventory_stock ||--o{ tf_inventory_flow : changes
+  tf_simulation_calendar ||--o{ tf_weather_record : has
+  tf_field ||--o{ tf_field_environment_state : has
+  tf_planting_plan ||--o{ tf_planting_growth_state : tracks
+  tf_farm_action ||--o{ tf_simulation_outcome : produces
+  tf_farm_action ||--o{ tf_farm_event : triggers
+  tf_crop ||--o{ tf_market_price : priced
+  tf_fund_account ||--o{ tf_fund_flow : changes
 ```
 
 ## 4. 系统表
@@ -110,6 +118,8 @@ erDiagram
 `sys_role_menu`：`id`、`role_id`、`menu_id`，唯一索引 `(role_id, menu_id)`。
 
 `sys_operation_log`：记录模块、操作、HTTP 方法、请求路径、操作人、IP、状态、错误信息、耗时、创建时间。
+
+`sys_dict_type`、`sys_dict_data`：管理状态值、枚举值、作物分类字典和沙盘字典项。
 
 ## 5. 组织与人员表
 
@@ -179,7 +189,28 @@ erDiagram
 
 索引：`idx_tf_crop_category(category_id)`、`idx_tf_crop_name(crop_name)`。
 
-### 6.3 tf_field
+### 6.3 tf_crop_growth_rule
+
+记录作物对季节、天气和环境的敏感度规则。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 规则 ID |
+| crop_id | BIGINT | 作物 ID |
+| season_code | VARCHAR(32) | 适宜季节 |
+| temperature_min | NUMERIC(5,2) | 适宜最低温 |
+| temperature_max | NUMERIC(5,2) | 适宜最高温 |
+| humidity_min | NUMERIC(5,2) | 适宜最低湿度 |
+| humidity_max | NUMERIC(5,2) | 适宜最高湿度 |
+| growth_rate_factor | NUMERIC(5,2) | 生长速度系数 |
+| disease_risk_factor | NUMERIC(5,2) | 病害风险系数 |
+| quality_factor | NUMERIC(5,2) | 质量系数 |
+| remark | VARCHAR(255) | 备注 |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+| deleted | BOOLEAN | 逻辑删除 |
+
+### 6.4 tf_field
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
@@ -217,7 +248,7 @@ erDiagram
 | updated_at | TIMESTAMP | 更新时间 |
 | deleted | BOOLEAN | 逻辑删除 |
 
-索引：`plan_no` 唯一索引、`crop_id`、`field_id`、`status`。
+索引：`uk_tf_planting_plan_no(plan_no)`、`idx_tf_planting_plan_crop(crop_id)`、`idx_tf_planting_plan_field(field_id)`、`idx_tf_planting_plan_status(status)`。
 
 ### 7.2 tf_harvest_record
 
@@ -240,7 +271,7 @@ erDiagram
 
 ### 8.1 tf_supplier
 
-供应商表字段：`id`、`supplier_name`、`contact_name`、`contact_phone`、`address`、`status`、`remark`、通用审计字段和 `deleted`。
+供应商表字段：`id`、`supplier_name`、`contact_name`、`contact_phone`、`address`、`reliability_score`、`status`、`remark`、通用审计字段和 `deleted`。
 
 ### 8.2 tf_procurement_order
 
@@ -273,6 +304,7 @@ erDiagram
 | quantity | NUMERIC(14,3) | 当前库存 |
 | unit | VARCHAR(16) | 单位 |
 | alert_threshold | NUMERIC(14,3) | 预警阈值 |
+| quality_score | NUMERIC(5,2) | 当前库存质量 |
 | version | INT | 乐观锁版本 |
 | created_at | TIMESTAMP | 创建时间 |
 | updated_at | TIMESTAMP | 更新时间 |
@@ -290,19 +322,19 @@ erDiagram
 | quantity_before | NUMERIC(14,3) | 变动前数量 |
 | quantity_after | NUMERIC(14,3) | 变动后数量 |
 | unit | VARCHAR(16) | 单位 |
-| biz_type | VARCHAR(32) | PROCUREMENT / SALES / MANUAL |
+| biz_type | VARCHAR(32) | PROCUREMENT / SALES / HARVEST / MANUAL |
 | biz_no | VARCHAR(64) | 来源单号 |
 | remark | VARCHAR(255) | 备注 |
 | created_at | TIMESTAMP | 创建时间 |
 | created_by | BIGINT | 创建人 |
 
-索引：`crop_id`、`(biz_type, biz_no)`、`created_at`。
+索引：`idx_tf_inventory_flow_crop(crop_id)`、`idx_tf_inventory_flow_biz(biz_type, biz_no)`、`idx_tf_inventory_flow_created_at(created_at)`。
 
 ## 10. 销售表
 
 ### 10.1 tf_customer
 
-客户表字段：`id`、`customer_name`、`contact_name`、`contact_phone`、`address`、`status`、`remark`、通用审计字段和 `deleted`。
+客户表字段：`id`、`customer_name`、`contact_name`、`contact_phone`、`address`、`credit_score`、`status`、`remark`、通用审计字段和 `deleted`。
 
 ### 10.2 tf_sales_order
 
@@ -324,17 +356,218 @@ erDiagram
 
 字段：`id`、`order_id`、`crop_id`、`quantity`、`unit`、`unit_price`、`amount`、`created_at`、`deleted`。
 
-## 11. 扩展表
+## 11. 资金表
 
-### 11.1 tf_file_resource
+### 11.1 tf_fund_account
+
+记录农场当前经营账户。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 账户 ID |
+| account_name | VARCHAR(64) | 账户名称 |
+| current_balance | NUMERIC(12,2) | 当前余额 |
+| currency_code | VARCHAR(16) | 币种 |
+| status | VARCHAR(32) | ENABLED / DISABLED |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+| deleted | BOOLEAN | 逻辑删除 |
+
+### 11.2 tf_fund_flow
+
+记录采购支出、销售收入和手工调整。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 流水 ID |
+| account_id | BIGINT | 账户 ID |
+| flow_type | VARCHAR(32) | INCOME / EXPENSE / ADJUSTMENT |
+| amount | NUMERIC(12,2) | 金额 |
+| balance_before | NUMERIC(12,2) | 变动前余额 |
+| balance_after | NUMERIC(12,2) | 变动后余额 |
+| biz_type | VARCHAR(32) | PROCUREMENT / SALES / MANUAL / INITIAL |
+| biz_no | VARCHAR(64) | 来源单号 |
+| summary | VARCHAR(255) | 摘要 |
+| created_at | TIMESTAMP | 创建时间 |
+| created_by | BIGINT | 创建人 |
+
+索引：`idx_tf_fund_flow_account(account_id)`、`idx_tf_fund_flow_biz(biz_type, biz_no)`、`idx_tf_fund_flow_created_at(created_at)`。
+
+## 12. 数字沙盘模拟表
+
+### 12.1 tf_simulation_calendar
+
+用于记录当前农场模拟日期和经营轮次。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 日历 ID |
+| current_date | DATE | 当前模拟日期 |
+| season | VARCHAR(32) | SPRING / SUMMER / AUTUMN / WINTER |
+| round_no | INT | 经营轮次 |
+| auto_tick_enabled | BOOLEAN | 是否自动推进 |
+| status | VARCHAR(32) | RUNNING / PAUSED / FINISHED |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+
+### 12.2 tf_weather_record
+
+记录每日天气和环境参数。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 天气记录 ID |
+| simulation_date | DATE | 模拟日期 |
+| weather_type | VARCHAR(32) | SUNNY / RAINY / CLOUDY / STORM / DROUGHT |
+| temperature | NUMERIC(5,2) | 温度 |
+| humidity | NUMERIC(5,2) | 湿度 |
+| rainfall | NUMERIC(8,2) | 降雨量 |
+| effect_json | JSONB | 对地块、作物、运输等影响 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.3 tf_field_environment_state
+
+记录地块实时环境状态。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 状态 ID |
+| field_id | BIGINT | 地块 ID |
+| simulation_date | DATE | 模拟日期 |
+| soil_moisture | NUMERIC(5,2) | 土壤湿度 |
+| soil_fertility | NUMERIC(5,2) | 土壤肥力 |
+| pest_risk | NUMERIC(5,2) | 病虫害风险 |
+| status_snapshot | VARCHAR(32) | 地块状态快照 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.4 tf_planting_growth_state
+
+记录种植计划的生长状态。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 生长状态 ID |
+| planting_plan_id | BIGINT | 种植计划 ID |
+| simulation_date | DATE | 模拟日期 |
+| growth_progress | NUMERIC(5,2) | 生长进度百分比 |
+| health_score | NUMERIC(5,2) | 健康度 |
+| estimated_yield | NUMERIC(14,3) | 预计产量 |
+| quality_score | NUMERIC(5,2) | 预计质量 |
+| risk_json | JSONB | 当前风险 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.5 tf_farm_action
+
+记录用户经营动作。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 动作 ID |
+| action_type | VARCHAR(32) | PROCUREMENT / SOWING / WATERING / FERTILIZING / HARVEST / SALES |
+| target_type | VARCHAR(32) | FIELD / PLAN / STOCK / ORDER |
+| target_id | BIGINT | 目标 ID |
+| action_params | JSONB | 操作参数 |
+| simulation_date | DATE | 模拟日期 |
+| operator_id | BIGINT | 操作人 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.6 tf_simulation_outcome
+
+记录一次操作的模拟结果。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 结果 ID |
+| action_id | BIGINT | 用户动作 ID |
+| outcome_type | VARCHAR(32) | PROCUREMENT / SOWING / CARE / HARVEST / SALES / TICK |
+| input_context_json | JSONB | 输入上下文 |
+| base_result_json | JSONB | 本地规则基础结果 |
+| ai_modifier_json | JSONB | AI 修正因子 |
+| final_result_json | JSONB | 最终结果 |
+| random_seed | BIGINT | 随机种子 |
+| ai_status | VARCHAR(32) | SUCCESS / FALLBACK / INVALID_OUTPUT / DISABLED |
+| summary | VARCHAR(512) | 结果摘要 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.7 tf_ai_simulation_call
+
+记录 AI 模拟调用。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | AI 调用 ID |
+| action_id | BIGINT | 用户动作 ID |
+| provider | VARCHAR(64) | AI Provider |
+| prompt_version | VARCHAR(64) | Prompt 版本 |
+| input_context_json | JSONB | 输入上下文 |
+| output_json | JSONB | AI 输出 |
+| status | VARCHAR(32) | SUCCESS / FAILED / INVALID_OUTPUT |
+| error_message | VARCHAR(512) | 错误信息 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.8 tf_farm_event
+
+记录农场事件。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 事件 ID |
+| event_type | VARCHAR(32) | WEATHER / CROP_DISEASE / MARKET / INVENTORY / PROCUREMENT / OPERATION |
+| event_level | VARCHAR(32) | INFO / WARNING / DANGER |
+| simulation_date | DATE | 模拟日期 |
+| target_type | VARCHAR(32) | 影响对象类型 |
+| target_id | BIGINT | 影响对象 ID |
+| title | VARCHAR(128) | 标题 |
+| description | VARCHAR(1024) | 描述 |
+| effect_json | JSONB | 影响结果 |
+| source_action_id | BIGINT | 来源动作 ID |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.9 tf_market_price
+
+记录作物市场价格和行情波动。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 市场价格 ID |
+| crop_id | BIGINT | 作物 ID |
+| simulation_date | DATE | 模拟日期 |
+| base_price | NUMERIC(12,2) | 基础价格 |
+| market_price | NUMERIC(12,2) | 市场价格 |
+| trend | VARCHAR(32) | UP / DOWN / STABLE |
+| reason | VARCHAR(255) | 波动原因 |
+| created_at | TIMESTAMP | 创建时间 |
+
+### 12.10 tf_operation_report
+
+记录经营复盘报告。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | BIGINT IDENTITY PK | 报告 ID |
+| round_no | INT | 经营轮次 |
+| start_date | DATE | 开始日期 |
+| end_date | DATE | 结束日期 |
+| total_revenue | NUMERIC(12,2) | 总收入 |
+| total_cost | NUMERIC(12,2) | 总成本 |
+| net_profit | NUMERIC(12,2) | 净利润 |
+| fund_summary_json | JSONB | 资金摘要 |
+| yield_summary_json | JSONB | 产量摘要 |
+| risk_summary_json | JSONB | 风险摘要 |
+| ai_summary | TEXT | AI 生成摘要，可为空 |
+| created_at | TIMESTAMP | 创建时间 |
+
+## 13. 扩展表
+
+### 13.1 tf_file_resource
 
 用于二期附件能力，字段包括业务类型、业务 ID、文件名、扩展名、MIME、文件大小、存储类型、存储路径、创建人、创建时间和逻辑删除。
 
-### 11.2 tf_ai_analysis
+### 13.2 tf_ai_analysis
 
 用于二期 AI 能力，字段包括分析类型、业务类型、业务 ID、Prompt 版本、输入摘要、输出内容、状态、错误信息、创建人和创建时间。
 
-## 12. 字典建议
+## 14. 字典建议
 
 | 字典类型 | 取值 |
 | --- | --- |
@@ -345,8 +578,15 @@ erDiagram
 | procurement_status | DRAFT, PENDING_INBOUND, INBOUNDED, CANCELED |
 | sales_status | DRAFT, PENDING_SHIPMENT, COMPLETED, CANCELED |
 | inventory_flow_type | INBOUND, OUTBOUND, ADJUSTMENT |
-| inventory_biz_type | PROCUREMENT, SALES, MANUAL |
+| inventory_biz_type | PROCUREMENT, SALES, HARVEST, MANUAL |
+| fund_flow_type | INCOME, EXPENSE, ADJUSTMENT |
+| fund_biz_type | PROCUREMENT, SALES, MANUAL, INITIAL |
+| action_type | PROCUREMENT, SOWING, WATERING, FERTILIZING, PEST_CONTROL, HARVEST, SALES |
+| event_type | WEATHER, CROP_DISEASE, MARKET, INVENTORY, PROCUREMENT, OPERATION |
+| event_level | INFO, WARNING, DANGER |
+| ai_status | SUCCESS, FALLBACK, INVALID_OUTPUT, DISABLED |
+| weather_type | SUNNY, RAINY, CLOUDY, STORM, DROUGHT |
 
-## 13. 初始化数据
+## 15. 初始化数据
 
-MVP 需要准备：管理员账号、系统角色、动态菜单、作物分类、作物、地块、供应商、客户、采购单、销售单、库存流水和种植计划演示数据。
+MVP 需要准备：管理员账号、系统角色、动态菜单、作物分类、作物、作物生长规则、地块、供应商、客户、经营账户、模拟日历、天气记录、市场价格、种植计划、采购单、销售单、库存流水、资金流水、模拟结果和事件演示数据。
